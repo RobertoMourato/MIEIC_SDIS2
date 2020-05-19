@@ -227,6 +227,7 @@ public class Peer implements Protocols {
             return "FAILED: fileId couldn't be generated";
 
         for (Long fileId : idsOfFile) {
+            // FIXME
             // This peer doesn't have any file with this id
             //if(fileToPeer.get(fileId) == null)
             //    continue;
