@@ -5,18 +5,21 @@ import java.util.concurrent.TimeUnit;
 
 public class ChordNode {
     static final Integer m = 30;            // Number of bits of each id
-
+    static final Integer MAX_NUM_SUCCESSORS = 4;
     private Peer peer;
     Long id;                        // Node ID
     private int next = 0;                   // FingerTable position to fix
+    private int next_successor = 0;
     List<Finger> finger_table;
     Finger predecessor = null;
+    List<Finger> successors;
 
     ChordNode(Peer peer, Finger node) {
         this.peer = peer;
         this.id = Utils.hash_id_peer(this.peer.host, this.peer.port);
         this.finger_table = new ArrayList<>(m);
         while (finger_table.size() < m) finger_table.add(null);
+        while (successors.size() < MAX_NUM_SUCCESSORS) successors.add(null);
         join(node);
         this.peer.executor.scheduleAtFixedRate(this::startStabilize, 5, 10, TimeUnit.SECONDS);
         this.peer.executor.scheduleAtFixedRate(this::fixFingers, 3, 5, TimeUnit.SECONDS);
@@ -28,6 +31,7 @@ public class ChordNode {
         this.id = Utils.hash_id_peer(this.peer.host, this.peer.port);
         this.finger_table =  new ArrayList<>(m);
         while (finger_table.size() < m) finger_table.add(null);
+        while (successors.size() < MAX_NUM_SUCCESSORS) successors.add(null);
         create();
         this.peer.executor.scheduleAtFixedRate(this::startStabilize, 5, 10, TimeUnit.SECONDS);
         this.peer.executor.scheduleAtFixedRate(this::fixFingers, 3, 5, TimeUnit.SECONDS);
@@ -52,7 +56,7 @@ public class ChordNode {
     }
 
     void lookup(Long identifier){
-        find_successor(identifier, new Finger(this.id, this.peer.host, this.peer.port), -1);
+        find_successor(identifier, new Finger(this.id, this.peer.host, this.peer.port), -2020);
     }
 
     void find_successor(Long identifier, Finger askingFinger, int fingerTablePos) {
@@ -144,8 +148,27 @@ public class ChordNode {
 //        sendFindSuccessorMessage(this.peer.host, this.peer.port, this.id, requestedId, next, closest_preceding_node(requestedId));
     }
 
-    private void checkPredecessorOnline(){
+    private void fixSuccessors() {
+        if (next_successor == 0) {
+            successors.set(0, finger_table.get(0));
+        }
+        else {
+            if (successors.get(next_successor-1) != null) {
 
+                Long requestedId = successors.get(next_successor-1).getId() % (1L << m);
+                find_successor(requestedId, new Finger(this.id, this.peer.host, this.peer.port), -next_successor);
+            }
+        }
+        next_successor = next_successor + 1;
+        if(next_successor >= MAX_NUM_SUCCESSORS)
+            next_successor = 0;
+    }
+
+    private void checkSuccessorOnline() {
+
+    }
+
+    private void checkPredecessorOnline(){
         if (predecessor != null){
 
             sendAskCheckPredecessorMessage(this.peer.host, this.peer.port, this.id, predecessor);
@@ -156,7 +179,7 @@ public class ChordNode {
                 e.printStackTrace();
             }
 
-            if (!this.peer.isActivePredecessor){
+            if (!this.peer.isActivePredecessor) {
                 if (finger_table.get(0).getId().equals(predecessor.getId())){
                     finger_table.set(0, new Finger(this.id, this.peer.host, this.peer.port));
                 }
@@ -166,7 +189,6 @@ public class ChordNode {
             this.peer.isActivePredecessor = false;
 
         }
-
     }
 
     private void sendAskCheckPredecessorMessage(String askingHost, Integer askingPort, Long askingId, Finger fingerToSend) {

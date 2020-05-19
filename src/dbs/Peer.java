@@ -130,7 +130,7 @@ public class Peer implements Protocols {
                     System.out.println("GOOD " + fingerToStore.getPort());
                     goodRep++;
                 } else {
-                    System.out.println("BAAD " + fingerToStore.getPort() + "  " + orderPositions.size() + " " + goodRep);
+                    System.out.println("BAD " + fingerToStore.getPort() + "  " + orderPositions.size() + " " + goodRep);
                 }
 
             }
@@ -786,8 +786,13 @@ public class Peer implements Protocols {
                 sendMessageAskingForFiles(this.host, this.port, this.chordNode.id, answerFinger);
             }
             this.chordNode.finger_table.set(fingerTablePos, answerFinger);
-        } else
+        }
+        else if (fingerTablePos == -2020) {
             this.fileToPeer.put(questionId, answerFinger);
+        }
+        else {
+            this.chordNode.successors.set(-fingerTablePos, answerFinger);
+        }
     }
 
     private void sendMessageAskingForFiles(String askingHost, Integer askingPort, Long askingId, Finger fingerToSend) {
