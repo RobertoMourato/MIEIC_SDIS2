@@ -54,15 +54,15 @@ public class TestApp {
                     filePath = args[2];
                     System.out.println(peer.delete(filePath));
                     break;
-                case "RECLAIM":
+                case "MANAGE":
 
                     if (args.length != 3) {
-                        System.out.println("ERROR: Reclaim arguments invalid: RECLAIM <disk_space_reclaim>");
+                        System.out.println("ERROR: Reclaim arguments invalid: MANAGE <file_path>");
                         return;
                     }
 
-                    int diskSpaceReclaim = Integer.parseInt(args[2]);
-                    System.out.println(peer.reclaim(diskSpaceReclaim));
+                    filePath = args[2];
+                    System.out.println(peer.manage(filePath));
 
                     break;
                 case "STATE":

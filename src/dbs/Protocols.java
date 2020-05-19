@@ -11,7 +11,7 @@ public interface Protocols extends Remote {
 
     String delete(String pathname) throws RemoteException;
 
-    String reclaim(Integer maxDiskSpace) throws RemoteException;
+    String manage(String pathName) throws RemoteException;
 
     String state() throws RemoteException;
 

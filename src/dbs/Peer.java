@@ -80,7 +80,7 @@ public class Peer implements Protocols {
     }
 
     @Override
-    public String backup(String pathname, int replicationDegree) throws RemoteException {
+    public String backup(String pathname, int replicationDegree) {
         File file = new File(pathname);
 
         if (!file.exists())
@@ -128,7 +128,7 @@ public class Peer implements Protocols {
     }
 
     @Override
-    public String restore(String pathname) throws RemoteException {
+    public String restore(String pathname) {
         File file = new File(pathname);
 
         if (!file.exists())
@@ -179,7 +179,7 @@ public class Peer implements Protocols {
     }
 
     @Override
-    public String delete(String pathname) throws RemoteException {
+    public String delete(String pathname) {
         File file = new File(pathname);
 
         if (!file.exists())
@@ -215,12 +215,35 @@ public class Peer implements Protocols {
     }
 
     @Override
-    public String reclaim(Integer maxDiskSpace) throws RemoteException {
-        return "reclaim";
+    public String manage(String pathName) {
+        File file = new File(pathName);
+
+        if (!file.exists())
+            return "FAILED: file not found";
+
+        List<Long> idsOfFile = Utils.hashes_of_file(file, 9);
+
+        if (idsOfFile.size() == 0)
+            return "FAILED: fileId couldn't be generated";
+
+        for (Long fileId : idsOfFile) {
+            // This peer doesn't have any file with this id
+            //if(fileToPeer.get(fileId) == null)
+            //    continue;
+
+            //fileToPeer.remove(fileId);
+            String filePath = this.id + "/" + fileId;
+            File tmp = new File(filePath);
+            if (tmp.delete()) {
+                filesStoredSize.remove(fileId);
+                System.out.println("Deleted file with ID=" + fileId);
+            }
+        }
+        return "Finished ";
     }
 
     @Override
-    public String state() throws RemoteException {
+    public String state() {
         Long usedSpace = getTotalUsedSpace();
         String listFilesSize = getFilesUsedSpaceList();
         String fingerTable = this.chordNode.getFingerTableString();
