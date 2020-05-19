@@ -38,7 +38,6 @@ public class ChordNode {
      */
     private void create() {
         this.predecessor = null;
-//        while (finger_table.size() < 32) finger_table.add(null);
         this.finger_table.set(0, new Finger(this.id, this.peer.host, this.peer.port));
     }
 

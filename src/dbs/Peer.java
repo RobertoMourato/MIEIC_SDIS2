@@ -86,7 +86,12 @@ public class Peer implements Protocols {
         if (!file.exists())
             return "FAILED: file not found";
 
-        List<Long> idsOfFile = Utils.hashes_of_file(file, replicationDegree);
+        List<Long> idsOfFile = Utils.hashes_of_file(file, 9);
+        List<Integer> orderPositions = Utils.positionsForReplicationDegree(replicationDegree);
+        for (int i = 0; i < 9; i++){
+            if (!orderPositions.contains(i))
+                orderPositions.add(i);
+        }
 
         if (idsOfFile.size() == 0)
             return "FAILED: fileId couldn't be generated";
@@ -109,17 +114,25 @@ public class Peer implements Protocols {
 
         int goodRep = 0;
 
-        for (int i = 0; i < idsOfFile.size(); i++){
+        Set<Long> usedPeers = new HashSet<>();
 
-            if (fileToPeer.get(idsOfFile.get(i)) == null){
+        for (int i = 0; i < orderPositions.size(); i++){
+
+            if (fileToPeer.get(idsOfFile.get(orderPositions.get(i))) == null){
                 System.out.println("FAILED: peer to store file not found");
             } else {
-                Finger fingerToStore = fileToPeer.get(idsOfFile.get(i));
-                fileToPeer.remove(idsOfFile.get(i));
+                Finger fingerToStore = fileToPeer.get((idsOfFile.get(orderPositions.get(i))));
+                fileToPeer.remove((idsOfFile.get(orderPositions.get(i))));
 
-                sendPutChunk(file, idsOfFile.get(i), fingerToStore);
-                System.out.println("GOOD " + fingerToStore.getPort());
-                goodRep++;
+                if (!usedPeers.contains(fingerToStore.getId()) && goodRep < replicationDegree){
+                    usedPeers.add(fingerToStore.getId());
+                    sendPutChunk(file, idsOfFile.get(orderPositions.get(i)), fingerToStore);
+                    System.out.println("GOOD " + fingerToStore.getPort());
+                    goodRep++;
+                } else {
+                    System.out.println("BAAD " + fingerToStore.getPort() + "  " + orderPositions.size() + " " + goodRep);
+                }
+
             }
         }
 

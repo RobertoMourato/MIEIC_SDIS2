@@ -87,7 +87,7 @@ class Utils {
         return list_ids;
     }
 
-    private static List<Integer> positionsForReplicationDegree(int replicationDegree){
+    static List<Integer> positionsForReplicationDegree(int replicationDegree){
         List<Integer> positions = new ArrayList<>();
         positions.add(0);
 
