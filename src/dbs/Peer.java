@@ -29,6 +29,7 @@ public class Peer implements Protocols {
     private ConcurrentHashMap<Long, Long> filesStoredSize = new ConcurrentHashMap<>();
 
     boolean isActivePredecessor = false;
+    boolean isActiveSuccessor = false;
 
     public Peer(String id, String host, Integer port) throws Exception {
         this.id = id;
@@ -370,12 +371,19 @@ public class Peer implements Protocols {
                 System.out.println("ANSWER_CHECK_PREDECESSOR " + this.id);
                 handleAnswerCheckPredecessor(message);
                 break;
+            case "ASK_CHECK_SUCCESSOR":
+                System.out.println("ASK_CHECK_SUCCESSOR " + this.id);
+                handleAnswerCheckSuccessor(message);
+                break;
             default:
                 System.out.println("ERROR");
                 System.out.println("\"" + mes + "\"");
                 break;
         }
 
+    }
+    private void handleAnswerCheckSuccessor(byte[] message) {
+        isActiveSuccessor = true;
     }
 
     private void handleAnswerCheckPredecessor(byte[] message) {

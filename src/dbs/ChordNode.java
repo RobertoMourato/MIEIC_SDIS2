@@ -18,23 +18,28 @@ public class ChordNode {
         this.peer = peer;
         this.id = Utils.hash_id_peer(this.peer.host, this.peer.port);
         this.finger_table = new ArrayList<>(m);
+        this.successors = new ArrayList<>(MAX_NUM_SUCCESSORS);
         while (finger_table.size() < m) finger_table.add(null);
         while (successors.size() < MAX_NUM_SUCCESSORS) successors.add(null);
         join(node);
         this.peer.executor.scheduleAtFixedRate(this::startStabilize, 5, 10, TimeUnit.SECONDS);
         this.peer.executor.scheduleAtFixedRate(this::fixFingers, 3, 5, TimeUnit.SECONDS);
         this.peer.executor.scheduleAtFixedRate(this::checkPredecessorOnline, 12, 10, TimeUnit.SECONDS);
+        this.peer.executor.scheduleAtFixedRate(this::fixSuccessors, 7, 10, TimeUnit.SECONDS);
     }
 
     ChordNode(Peer peer) {
         this.peer = peer;
         this.id = Utils.hash_id_peer(this.peer.host, this.peer.port);
         this.finger_table =  new ArrayList<>(m);
+        this.successors = new ArrayList<>(MAX_NUM_SUCCESSORS);
         while (finger_table.size() < m) finger_table.add(null);
         while (successors.size() < MAX_NUM_SUCCESSORS) successors.add(null);
         create();
         this.peer.executor.scheduleAtFixedRate(this::startStabilize, 5, 10, TimeUnit.SECONDS);
         this.peer.executor.scheduleAtFixedRate(this::fixFingers, 3, 5, TimeUnit.SECONDS);
+        this.peer.executor.scheduleAtFixedRate(this::checkPredecessorOnline, 12, 10, TimeUnit.SECONDS);
+        this.peer.executor.scheduleAtFixedRate(this::fixSuccessors, 7, 10, TimeUnit.SECONDS);
     }
 
     /**
@@ -155,17 +160,35 @@ public class ChordNode {
         else {
             if (successors.get(next_successor-1) != null) {
 
-                Long requestedId = successors.get(next_successor-1).getId() % (1L << m);
+                Long requestedId = (successors.get(next_successor-1).getId() + 1) % (1L << m);
                 find_successor(requestedId, new Finger(this.id, this.peer.host, this.peer.port), -next_successor);
             }
         }
         next_successor = next_successor + 1;
         if(next_successor >= MAX_NUM_SUCCESSORS)
             next_successor = 0;
+
+        checkSuccessorOnline();
     }
 
     private void checkSuccessorOnline() {
+        if (successors.get(0) != null){
 
+            sendAskCheckSuccessorMessage(this.peer.host, this.peer.port, this.id, successors.get(0));
+
+            try {
+                TimeUnit.MILLISECONDS.sleep(2000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+            if (!this.peer.isActiveSuccessor) {
+                successors.set(0, successors.get(1));
+            }
+
+            this.peer.isActiveSuccessor = false;
+
+        }
     }
 
     private void checkPredecessorOnline(){
@@ -188,6 +211,20 @@ public class ChordNode {
 
             this.peer.isActivePredecessor = false;
 
+        }
+    }
+
+    private void sendAskCheckSuccessorMessage(String askingHost, Integer askingPort, Long askingId, Finger fingerToSend) {
+        StringBuilder message = new StringBuilder();
+        message.append("ASK_CHECK_SUCCESSOR").append(" ");
+        message.append(askingHost).append(" ");
+        message.append(askingPort).append(" ");
+        message.append(askingId).append(" \r\n");
+
+        try {
+            this.peer.chordEngine.sendMessageToPeer(message.toString().getBytes(), fingerToSend);
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
@@ -282,7 +319,7 @@ public class ChordNode {
 
     String getFingerTableString(){
         StringBuilder table = new StringBuilder();
-        table.append("FINGER TABLE FOR PEER ").append(this.id).append(":\n");
+
         if (predecessor != null){
             table.append("PREDECESSOR").append(": ").append(predecessor.getId()).append(" ").
                     append(predecessor.getHost()).append(" ").
@@ -290,6 +327,17 @@ public class ChordNode {
         } else {
             table.append("PREDECESSOR").append(": ").append("NOT DEFINED").append("\n");
         }
+        table.append("SUCCESSORS FOR PEER ").append(this.id).append(":\n");
+        for(int i = 0; i < MAX_NUM_SUCCESSORS; i++){
+            if (successors.size() > i && successors.get(i) != null){
+                table.append(i).append(": ").append(successors.get(i).getId()).append(" ").
+                        append(successors.get(i).getHost()).append(" ").
+                        append(successors.get(i).getPort()).append("\n");
+            } else {
+                table.append(i).append(": ").append("NOT DEFINED").append("\n");
+            }
+        }
+        table.append("FINGER TABLE FOR PEER ").append(this.id).append(":\n");
         for(int i = 0; i < m; i++){
             if (finger_table.size() > i && finger_table.get(i) != null){
                 table.append(i).append(": ").append(finger_table.get(i).getId()).append(" ").
