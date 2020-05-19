@@ -121,7 +121,6 @@ public class Peer implements Protocols {
                 System.out.println("GOOD " + fingerToStore.getPort());
                 goodRep++;
             }
-
         }
 
         return "SENT " + goodRep + "/" + replicationDegree + " REPLICAS";
@@ -227,12 +226,6 @@ public class Peer implements Protocols {
             return "FAILED: fileId couldn't be generated";
 
         for (Long fileId : idsOfFile) {
-            // FIXME
-            // This peer doesn't have any file with this id
-            //if(fileToPeer.get(fileId) == null)
-            //    continue;
-
-            //fileToPeer.remove(fileId);
             String filePath = this.id + "/" + fileId;
             File tmp = new File(filePath);
             if (tmp.delete()) {
