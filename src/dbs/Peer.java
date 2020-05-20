@@ -35,7 +35,7 @@ public class Peer implements Protocols {
         this.id = id;
         this.host = host;
         this.port = port;
-        this.executor = (ScheduledThreadPoolExecutor) Executors.newScheduledThreadPool(20);
+        this.executor = (ScheduledThreadPoolExecutor) Executors.newScheduledThreadPool(60);
         this.chordEngine = new ChordEngine(this);
         this.chordNode = new ChordNode(this);
 
@@ -799,7 +799,9 @@ public class Peer implements Protocols {
             this.fileToPeer.put(questionId, answerFinger);
         }
         else {
-            this.chordNode.successors.set(-fingerTablePos, answerFinger);
+            synchronized(this.chordNode.successors){
+                this.chordNode.successors.set(-fingerTablePos, answerFinger);
+            }
         }
     }
 

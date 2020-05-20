@@ -156,6 +156,7 @@ public class ChordNode {
     private void fixSuccessors() {
         if (next_successor == 0) {
             successors.set(0, finger_table.get(0));
+            checkSuccessorOnline();
         }
         else {
             if (successors.get(next_successor-1) != null) {
@@ -167,8 +168,6 @@ public class ChordNode {
         next_successor = next_successor + 1;
         if(next_successor >= MAX_NUM_SUCCESSORS)
             next_successor = 0;
-
-        checkSuccessorOnline();
     }
 
     private void checkSuccessorOnline() {
@@ -177,13 +176,19 @@ public class ChordNode {
             sendAskCheckSuccessorMessage(this.peer.host, this.peer.port, this.id, successors.get(0));
 
             try {
-                TimeUnit.MILLISECONDS.sleep(2000);
+                TimeUnit.MILLISECONDS.sleep(4000);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
 
             if (!this.peer.isActiveSuccessor) {
-                successors.set(0, successors.get(1));
+                synchronized (successors){
+                    for(int i = 1; i < MAX_NUM_SUCCESSORS; i++){
+                        successors.set(i-1, successors.get(i));
+                    }
+                    if (successors.get(0) != null)
+                        finger_table.set(0, successors.get(0));
+                }
             }
 
             this.peer.isActiveSuccessor = false;
@@ -197,7 +202,7 @@ public class ChordNode {
             sendAskCheckPredecessorMessage(this.peer.host, this.peer.port, this.id, predecessor);
 
             try {
-                TimeUnit.MILLISECONDS.sleep(2000);
+                TimeUnit.MILLISECONDS.sleep(4000);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
