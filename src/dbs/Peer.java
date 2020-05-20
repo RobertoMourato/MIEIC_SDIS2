@@ -373,6 +373,10 @@ public class Peer implements Protocols {
                 break;
             case "ASK_CHECK_SUCCESSOR":
                 System.out.println("ASK_CHECK_SUCCESSOR " + this.id);
+                handleAskCheckSuccessor(message);
+                break;
+            case "ANSWER_CHECK_SUCCESSOR":
+                System.out.println("ANSWER_CHECK_SUCCESSOR " + this.id);
                 handleAnswerCheckSuccessor(message);
                 break;
             default:
@@ -384,6 +388,37 @@ public class Peer implements Protocols {
     }
     private void handleAnswerCheckSuccessor(byte[] message) {
         isActiveSuccessor = true;
+    }
+
+    private void handleAskCheckSuccessor(byte[] message) {
+
+        String mes = new String(message, StandardCharsets.US_ASCII);
+        mes = mes.trim();
+        String[] arguments = mes.split(" ");
+
+
+        String askingHost = arguments[1];
+        Integer askingPort = Integer.parseInt(arguments[2]);
+        Long askingId = Long.parseLong(arguments[3]);
+
+        Finger askingFinger = new Finger(askingId, askingHost, askingPort);
+
+        sendAnswerCheckSuccessor(this.host, this.port, this.chordNode.id, askingFinger);
+    }
+
+    private void sendAnswerCheckSuccessor(String answerHost, Integer answerPort, Long answerId, Finger fingerToSend){
+
+        StringBuilder message = new StringBuilder();
+        message.append("ANSWER_CHECK_SUCCESSOR").append(" ");
+        message.append(answerHost).append(" ");
+        message.append(answerPort).append(" ");
+        message.append(answerId).append(" \r\n");
+
+        try {
+            this.chordEngine.sendMessageToPeer(message.toString().getBytes(), fingerToSend);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     private void handleAnswerCheckPredecessor(byte[] message) {

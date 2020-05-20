@@ -155,7 +155,12 @@ public class ChordNode {
 
     private void fixSuccessors() {
         if (next_successor == 0) {
-            successors.set(0, finger_table.get(0));
+            synchronized (successors) {
+                successors.set(0, finger_table.get(0));
+            }
+            next_successor = next_successor + 1;
+            if(next_successor >= MAX_NUM_SUCCESSORS)
+                next_successor = 0;
             checkSuccessorOnline();
         }
         else {
@@ -164,10 +169,10 @@ public class ChordNode {
                 Long requestedId = (successors.get(next_successor-1).getId() + 1) % (1L << m);
                 find_successor(requestedId, new Finger(this.id, this.peer.host, this.peer.port), -next_successor);
             }
+            next_successor = next_successor + 1;
+            if(next_successor >= MAX_NUM_SUCCESSORS)
+                next_successor = 0;
         }
-        next_successor = next_successor + 1;
-        if(next_successor >= MAX_NUM_SUCCESSORS)
-            next_successor = 0;
     }
 
     private void checkSuccessorOnline() {

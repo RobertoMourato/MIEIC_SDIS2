@@ -33,7 +33,7 @@ public class ChordEngine {
                 client1.write(message);
                 client1.shutdown();
             } catch (Exception e) {
-                System.out.println("COULDN'T CONNECT TO PEER");
+                System.out.println("COULDN'T CONNECT TO PEER " + peerToSend.port);
             }
         });
     }
