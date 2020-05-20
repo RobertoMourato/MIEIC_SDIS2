@@ -127,7 +127,8 @@ public class Peer implements Protocols {
 
                 if (!usedPeers.contains(fingerToStore.getId()) && goodRep < replicationDegree){
                     usedPeers.add(fingerToStore.getId());
-                    sendPutChunk(file, idsOfFile.get(orderPositions.get(i)), fingerToStore);
+                    final int index = i;
+                    executor.execute(() -> sendPutChunk(file, idsOfFile.get(orderPositions.get(index)), fingerToStore));
                     System.out.println("GOOD " + fingerToStore.getPort());
                     goodRep++;
                 } else {
