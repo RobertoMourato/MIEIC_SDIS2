@@ -15,7 +15,8 @@ public class ChordEngine {
             server = new Server(this.peer, this.peer.host, this.peer.port);
             this.peer.executor.execute(() -> {
                 try {
-                    server.processRequests();
+                    server.read();
+                    System.out.println("SOUTINHO");
                 } catch (Exception e) {
                     e.printStackTrace();
                 }

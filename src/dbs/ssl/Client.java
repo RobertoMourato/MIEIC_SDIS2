@@ -2,14 +2,16 @@ package dbs.ssl;
 
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
+import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.util.concurrent.Future;
 import javax.net.ssl.*;
 
 public class Client extends NetworkManager {
     private final String address;
     private final int port;
 
-    private SocketChannel socketChannel;
+    private AsynchronousSocketChannel socketChannel;
     private final SSLEngine engine;
 
     public Client(String address, int port) throws Exception  {
@@ -24,13 +26,12 @@ public class Client extends NetworkManager {
     }
 
     public void connect() throws Exception {
-        this.socketChannel = SocketChannel.open();
-        this.socketChannel.configureBlocking(false);
-        this.socketChannel.connect(new InetSocketAddress(this.address, this.port));
+        this.socketChannel = AsynchronousSocketChannel.open();
+        Future<Void> future = this.socketChannel.connect(new InetSocketAddress(this.address, this.port));
+        future.get();
 
-        do {} while(!this.socketChannel.finishConnect());
+        //do {} while(!this.socketChannel.finishConnect());
 
-        this.engine.beginHandshake();
         handshake(this.socketChannel, this.engine);
     }
 

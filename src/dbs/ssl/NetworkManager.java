@@ -4,11 +4,13 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.security.*;
 import java.security.cert.CertificateException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
@@ -54,7 +56,7 @@ public class NetworkManager {
         this.externalEncryptedBuffer.clear();
     }
 
-    void handshake(SocketChannel socketChannel, SSLEngine engine) throws Exception {
+    void handshake(AsynchronousSocketChannel socketChannel, SSLEngine engine) throws Exception {
         SSLEngineResult result;
         HandshakeStatus status;
 
@@ -85,7 +87,6 @@ public class NetworkManager {
                     }
 
                     handleNeedWrap(socketChannel, engine, result, status);
-
                     break;
 
                 case NEED_TASK:
@@ -105,11 +106,13 @@ public class NetworkManager {
 
     }
 
-    private HandshakeStatus handleNeedUnwrap(SocketChannel socketChannel, SSLEngine engine) throws Exception {
+    private HandshakeStatus handleNeedUnwrap(AsynchronousSocketChannel socketChannel, SSLEngine engine) throws Exception {
         HandshakeStatus status;
         SSLEngineResult result;
 
-        if (socketChannel.read(externalEncryptedBuffer) < 0) {
+        Future<Integer> bytesRead = socketChannel.read(externalEncryptedBuffer);
+
+        if (bytesRead.get() < 0) {
             status = engine.getHandshakeStatus();
             engine.closeOutbound();
             engine.closeInbound();
@@ -176,7 +179,7 @@ public class NetworkManager {
         return status;
     }
 
-    private void handleNeedWrap(SocketChannel socketChannel, SSLEngine engine, SSLEngineResult result, HandshakeStatus status) throws Exception {
+    private void handleNeedWrap(AsynchronousSocketChannel socketChannel, SSLEngine engine, SSLEngineResult result, HandshakeStatus status) throws Exception {
         switch (result.getStatus()) {
             case OK :
                 this.internalEncryptedBuffer.flip();
@@ -223,7 +226,7 @@ public class NetworkManager {
 
     }
 
-    void closure(SocketChannel socketChannel, SSLEngine engine) throws Exception {
+    void closure(AsynchronousSocketChannel socketChannel, SSLEngine engine) throws Exception {
         engine.closeOutbound();
         handshake(socketChannel, engine);
         socketChannel.close();

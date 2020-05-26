@@ -4,18 +4,19 @@ import dbs.Peer;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
-import java.nio.channels.SelectionKey;
-import java.nio.channels.Selector;
-import java.nio.channels.ServerSocketChannel;
-import java.nio.channels.SocketChannel;
+import java.nio.channels.*;
 import java.nio.channels.spi.SelectorProvider;
 import java.util.Iterator;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import javax.net.ssl.*;
 
 public class Server extends NetworkManager {
     private final Selector selector;
     private final Peer peer;
     private final SSLContext context;
+    Future<AsynchronousSocketChannel> acceptFuture;
+    AsynchronousServerSocketChannel asyncSSC;
 
     public Server(Peer peer, String address, Integer port) throws Exception {
         this.peer = peer;
@@ -31,25 +32,32 @@ public class Server extends NetworkManager {
     }
 
     private void initSocketChannel(String address, Integer port) throws IOException {
-        ServerSocketChannel serverSocketChannel = ServerSocketChannel.open();
-        serverSocketChannel.configureBlocking(false);
-        serverSocketChannel.socket().bind(new InetSocketAddress(address, port));
-        serverSocketChannel.register(this.selector, SelectionKey.OP_ACCEPT);
+        asyncSSC = AsynchronousServerSocketChannel.open();
+        asyncSSC.bind(new InetSocketAddress(address, port));
+        //asyncSSC.register(this.selector, SelectionKey.OP_ACCEPT);
     }
 
-    private void read(SocketChannel channel, SSLEngine engine) throws Exception {
+    public void read() throws Exception {
+        acceptFuture = asyncSSC.accept();
+
+        AsynchronousSocketChannel channel = acceptFuture.get();
+        SSLEngine engine = configureSSLEngine();
+
+        handshake(channel, engine);
+
+        System.out.println("SERVER FINISHED HANDSHAKE");
+
         externalEncryptedBuffer.clear();
 
-        int bytesRead = channel.read(externalEncryptedBuffer);
+        Future<Integer> bytesRead = acceptFuture.get().read(externalEncryptedBuffer);
         ByteBuffer message = ByteBuffer.allocate(30000);
-
-        if (bytesRead > 0) {
+        if (bytesRead.get() > 0) {
             externalEncryptedBuffer.flip();
 
             while (externalEncryptedBuffer.hasRemaining()) {
                 externalApplicationBuffer.clear();
                 SSLEngineResult result = engine.unwrap(externalEncryptedBuffer, externalApplicationBuffer);
-                if (!handleREADStatus(result, message, engine, channel)) {
+                if (!handleREADStatus(result, message, engine)) {
                     if (message.position() != 0){
                         byte[] arr = new byte[message.position()];
                         message.rewind();
@@ -71,15 +79,16 @@ public class Server extends NetworkManager {
                 });
             }
 
-        } else if (bytesRead < 0) {
+        } else if (bytesRead.get() < 0) {
             engine.closeInbound();
 
             closure(channel, engine);
         }
     }
 
-    private Boolean handleREADStatus(SSLEngineResult result, ByteBuffer message, SSLEngine engine, SocketChannel channel) throws Exception {
+    private Boolean handleREADStatus(SSLEngineResult result, ByteBuffer message, SSLEngine engine) throws Exception {
         ByteBuffer aux;
+        AsynchronousSocketChannel channel = this.acceptFuture.get();
 
         switch (result.getStatus()) {
             case OK:
@@ -116,33 +125,6 @@ public class Server extends NetworkManager {
                 throw new Exception();
         }
         return true;
-    }
-
-    public void processRequests() throws Exception {
-        do {
-            selector.select();
-            Iterator<SelectionKey> iterator = selector.selectedKeys().iterator();
-
-            while (iterator.hasNext()) {
-                SelectionKey key = iterator.next();
-
-                if (key.isAcceptable())
-                    register(key);
-                else if (key.isReadable())
-                    read((SocketChannel) key.channel(), (SSLEngine) key.attachment());
-
-                iterator.remove();
-            }
-        } while (true);
-    }
-
-    private void register(SelectionKey key) throws Exception {
-        SocketChannel channel = ((ServerSocketChannel) key.channel()).accept();
-        channel.configureBlocking(false);
-
-        SSLEngine engine = configureSSLEngine();
-        handshake(channel, engine);
-        channel.register(selector, SelectionKey.OP_READ, engine);
     }
 
     private SSLEngine configureSSLEngine() throws SSLException {
