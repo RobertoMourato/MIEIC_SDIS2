@@ -22,7 +22,7 @@ public class Server extends NetworkManager {
         this.context = SSLContext.getInstance("TLSv1.2");
 
         initManagers(context, false);
-        SSLEngine engine = this.context.createSSLEngine();
+        SSLEngine engine = this.context.createSSLEngine(address, port);
 
         setupPeer(engine, false);
         this.selector = SelectorProvider.provider().openSelector();

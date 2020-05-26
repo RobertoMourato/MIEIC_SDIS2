@@ -6,27 +6,27 @@ import java.nio.channels.SocketChannel;
 import javax.net.ssl.*;
 
 public class Client extends NetworkManager {
-    private final String remoteAddress;
+    private final String address;
     private final int port;
 
     private SocketChannel socketChannel;
     private final SSLEngine engine;
 
-    public Client(String remoteAddress, int port) throws Exception  {
-        this.remoteAddress = remoteAddress;
+    public Client(String address, int port) throws Exception  {
+        this.address = address;
         this.port = port;
 
         SSLContext context = SSLContext.getInstance("TLSv1.2");
         initManagers(context, true);
 
-        this.engine = context.createSSLEngine();
+        this.engine = context.createSSLEngine(address, port);
         setupPeer(this.engine, true);
     }
 
     public void connect() throws Exception {
         this.socketChannel = SocketChannel.open();
         this.socketChannel.configureBlocking(false);
-        this.socketChannel.connect(new InetSocketAddress(this.remoteAddress, this.port));
+        this.socketChannel.connect(new InetSocketAddress(this.address, this.port));
 
         do {} while(!this.socketChannel.finishConnect());
 
