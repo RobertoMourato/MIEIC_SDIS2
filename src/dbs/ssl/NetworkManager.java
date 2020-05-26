@@ -84,7 +84,7 @@ public class NetworkManager {
                         break;
                     }
 
-                    handleNeedWrap(socketChannel, engine, result, status);
+                    handleNeedWrap(socketChannel, engine, result);
 
                     break;
 
@@ -176,7 +176,7 @@ public class NetworkManager {
         return status;
     }
 
-    private void handleNeedWrap(SocketChannel socketChannel, SSLEngine engine, SSLEngineResult result, HandshakeStatus status) throws Exception {
+    private void handleNeedWrap(SocketChannel socketChannel, SSLEngine engine, SSLEngineResult result) throws Exception {
         switch (result.getStatus()) {
             case OK :
                 this.internalEncryptedBuffer.flip();
